@@ -37,7 +37,7 @@ AMXPathFinder::AMXFile::AMXFile(const std::string &name)
    mtime_(fileutils::GetModificationTime(name))
 {
   if (amx_ != nullptr) {
-    if (aux_LoadProgram(amx_, name.c_str(), nullptr) != AMX_ERR_NONE) {
+    if (aux_LoadProgram(amx_, const_cast<char *>(name.c_str()), nullptr) != AMX_ERR_NONE) {
       std::free(amx_);
       amx_ = nullptr;
     }
