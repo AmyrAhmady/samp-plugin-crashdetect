@@ -36,7 +36,11 @@ class Log {
     const std::string &filename = Options::shared().log_path();
     if (!filename.empty()) {
       file_ = std::fopen(filename.c_str(), "a");
-      std::setbuf(file_, nullptr);
+       if (file_ != nullptr) {
+            std::setbuf(file_, nullptr);
+        } else {
+            fprintf(stderr, "Error: Could not open log file '%s'.\n", filename.c_str());
+        }
     }
     if (file_ != nullptr) {
       time_format_ = Options::shared().log_time_format();
