@@ -37,7 +37,7 @@ namespace {
 
 struct is_space : public std::unary_function<char, bool> {
   bool operator()(char c) const {
-	if(c >= 0 && c <= 255) {
+	if((c >= 0 && c <= 255) == false) {
 		printf("WARNING: passed invalid char in is_space struct : 0x%X\n", static_cast<unsigned char>(c));
 	}
 	return std::isspace(static_cast<unsigned char>(c)) != 0;
