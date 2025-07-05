@@ -210,6 +210,8 @@ int CrashDetect::OnExecError(int index, cell *retval, int error) {
     return AMX_ERR_NONE;
   }
 
+  LogDebugPrint("OnExec called.");
+
   // The following error codes should not be treated as errors:
   //
   // 1. AMX_ERR_NONE is always returned when a public function returns
@@ -243,18 +245,36 @@ int CrashDetect::OnExecError(int index, cell *retval, int error) {
   // Remember values of AMX registers before calling OnRuntimeError().
   AMX amx_state = *amx_.amx();
 
+  LogDebugPrint("amx_state_.stk = 0x%X", amx_state.stk);
+  LogDebugPrint("amx_state_.stp = 0x%X", amx_state.stp);
+  LogDebugPrint("amx_state_.hea = 0x%X", amx_state.hea);
+
   // public OnRuntimeError(code, &bool:suppress);
   cell callback_index = amx_.GetPublicIndex("OnRuntimeError");
   cell suppress = 0;
 
   if (callback_index >= 0) {
     if (amx_.CheckStack()) {
-      cell suppress_addr, *suppress_ptr;
+      cell suppress_addr;
+      cell* suppress_ptr = nullptr;
       amx_PushArray(amx_, &suppress_addr, &suppress_ptr, &suppress, 1);
       amx_Push(amx_, error);
       OnExec(retval, callback_index);
       amx_Release(amx_, suppress_addr);
-      suppress = *suppress_ptr;
+      if (amx_state.error == AMX_ERR_STACKLOW ||
+          amx_state.error == AMX_ERR_STACKERR)
+      {
+          LogDebugPrint("OnExecError: Entering stack adjustment logic.");
+          LogDebugPrint("BEFORE adjustment: amx_state_.stk = 0x%X, amx_state_.stp = 0x%X", amx_state.stk, amx_state.stp);
+          amx_state.stk += amx_state.stp;
+          LogDebugPrint("AFTER adjustment: amx_state_.stk = 0x%X", amx_state.stk);
+      }
+	  if (suppress_ptr != nullptr) {
+          suppress = *suppress_ptr;
+	  }
+	  else {
+		  suppress = 0;
+	  }
     }
   }
 
