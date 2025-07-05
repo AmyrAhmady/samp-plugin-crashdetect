@@ -37,7 +37,10 @@ namespace {
 
 struct is_space : public std::unary_function<char, bool> {
   bool operator()(char c) const {
-    return std::isspace(c) != 0;
+	if(c >= 0 && c <= 255) {
+		printf("WARNING: passed invalid char in is_space struct : 0x%X\n", static_cast<unsigned char>(c));
+	}
+	return std::isspace(static_cast<unsigned char>(c)) != 0;
   }
 };
 
@@ -54,6 +57,8 @@ inline std::string &TrimStringRight(std::string &s) {
 }
 
 inline std::string &TrimString(std::string &s) {
+  printf("[crashdetect|ConfigReader Debug] Entering TrimString (Right). Input string length: %d\n", s.length());
+  printf("[crashdetect|ConfigReader Debug] Input string content (first 100 chars): [%.100s]\n", s.c_str());
   return TrimStringLeft(TrimStringRight(s));
 }
 
@@ -87,6 +92,8 @@ void ConfigReader::ReadFromString(const std::string &config) {
 }
 
 void ConfigReader::ReadFromStream(std::istream &stream) {
+	
+  printf("[crashdetect|ConfigReader Debug] Reading next line from stream...\n");
   std::string line;
 
   while (std::getline(stream, line)) {
@@ -109,6 +116,7 @@ void ConfigReader::ReadFromStream(std::istream &stream) {
 
     options_.insert(std::make_pair(name, value));
   }
+  printf("[crashdetect|ConfigReader Debug] Read line: %s\n", line.c_str());
 }
 
 void ConfigReader::GetValue(const std::string &name,
