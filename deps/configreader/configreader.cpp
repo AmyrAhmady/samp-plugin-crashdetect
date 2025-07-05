@@ -57,7 +57,7 @@ inline std::string &TrimStringRight(std::string &s) {
 }
 
 inline std::string &TrimString(std::string &s) {
-  printf("[crashdetect|ConfigReader Debug] Entering TrimString (Right). Input string length: %d\n", s.length());
+  printf("[crashdetect|ConfigReader Debug] Entering TrimString (Left). Input string length: %d\n", s.length());
   printf("[crashdetect|ConfigReader Debug] Input string content (first 100 chars): [%.100s]\n", s.c_str());
   return TrimStringLeft(TrimStringRight(s));
 }
