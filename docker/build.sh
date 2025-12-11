@@ -17,6 +17,7 @@ fi
 || config="$CONFIG"
 
 docker build \
+    --platform linux/amd64 \
     -t samp-plugin-crashdetect/build:ubuntu-18.04 ./ \
 || exit 1
 
@@ -25,12 +26,12 @@ for folder in "${folders[@]}"; do
     if [[ ! -d "./${folder}" ]]; then
         mkdir ${folder}
     fi
-    sudo chown -R 1000:1000 ${folder} || exit 1
 done
 
 docker run \
     --rm \
     -t \
+    --platform linux/amd64 \
     -w /code \
     -v $PWD/..:/code \
     -v $PWD/build:/code/build \
