@@ -1,5 +1,16 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if [[ -d "${SCRIPT_DIR}/build" ]]; then
+    echo "Warning: existing build dir found, compilation might fail"
+    read -p "Do you want to delete your old build directory? (yes/no): " answer
+    if [[ "$answer" == "yes" ]]; then
+        rm -rf "${SCRIPT_DIR}/build"
+        echo "Build directory deleted."
+    fi
+fi
+
 # Available configs: Debug, RelWithDebInfo, [Release], MinSizeRel
 [[ -z "$CONFIG" ]] \
 && config=Release \
