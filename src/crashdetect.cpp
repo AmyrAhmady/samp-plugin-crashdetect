@@ -99,6 +99,7 @@ void CrashDetect::PluginLoad() {
 
 void CrashDetect::PluginUnload() {
   long_call_time_running_ = false;
+  frame_start_times_.clear();
 }
 
 int CrashDetect::Load() {
@@ -123,6 +124,8 @@ int CrashDetect::Load() {
 }
 
 int CrashDetect::Unload() {
+  // Clear frame times for this AMX to prevent stale data
+  frame_start_times_.clear();
   return AMX_ERR_NONE;
 }
 

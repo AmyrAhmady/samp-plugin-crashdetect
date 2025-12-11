@@ -85,11 +85,18 @@ std::string last_opened_amx_file_name;
 #endif
 
 int AMXAPI OnDebugHook(AMX *amx) {
-  return CrashDetect::GetHandler(amx)->OnDebugHook();
+  CrashDetect *handler = CrashDetect::GetHandler(amx);
+  if (handler == nullptr) {
+    return AMX_ERR_NONE;
+  }
+  return handler->OnDebugHook();
 }
 
 int AMXAPI OnCallback(AMX *amx, cell index, cell *result, cell *params) {
   CrashDetect *handler = CrashDetect::GetHandler(amx);
+  if (handler == nullptr) {
+    return AMX_ERR_NONE;
+  }
   return handler->OnCallback(index, result, params);
 }
 
@@ -106,16 +113,25 @@ int AMXAPI OnExec(AMX *amx, cell *retval, int index) {
 
 int AMXAPI OnExecError(AMX *amx, cell index, cell *retval, int error) {
   CrashDetect *handler = CrashDetect::GetHandler(amx);
+  if (handler == nullptr) {
+    return AMX_ERR_NONE;
+  }
   return handler->OnExecError(index, retval, error);
 }
 
 int AMXAPI OnLongCallRequest(AMX *amx, int option, int value) {
   CrashDetect *handler = CrashDetect::GetHandler(amx);
+  if (handler == nullptr) {
+    return AMX_ERR_NONE;
+  }
   return handler->OnLongCallRequest(option, value);
 }
 
 int AMXAPI OnAddressNaughtRequest(AMX *amx, int option) {
   CrashDetect *handler = CrashDetect::GetHandler(amx);
+  if (handler == nullptr) {
+    return AMX_ERR_NONE;
+  }
   return handler->OnAddressNaughtRequest(option);
 }
 
