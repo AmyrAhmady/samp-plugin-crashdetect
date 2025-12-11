@@ -25,6 +25,7 @@
 #ifndef AMXCALLSTACK_H
 #define AMXCALLSTACK_H
 
+#include <chrono>
 #include <stack>
 #include "amxref.h"
 
@@ -51,12 +52,17 @@ class AMXCall {
   bool IsPublic() const { return type_ == PUBLIC; }
   bool IsNative() const { return type_ == NATIVE; }
 
+  std::chrono::high_resolution_clock::time_point start_time() const {
+    return start_time_;
+  }
+
  private:
   AMXRef amx_;
   Type type_;
   cell frm_;
   cell cip_;
   cell index_;
+  std::chrono::high_resolution_clock::time_point start_time_;
 };
 
 class AMXCallStack {

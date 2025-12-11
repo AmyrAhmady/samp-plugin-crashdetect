@@ -77,6 +77,7 @@ unsigned int CrashDetect::long_call_time_;
 std::chrono::microseconds CrashDetect::long_call_time_current_;
 std::chrono::high_resolution_clock::time_point CrashDetect::long_call_time_next_;
 bool CrashDetect::long_call_time_running_;
+std::map<cell, std::chrono::high_resolution_clock::time_point> CrashDetect::frame_start_times_;
 
 CrashDetect::CrashDetect(AMX *amx)
   : AMXHandler<CrashDetect>(amx),
@@ -126,19 +127,26 @@ int CrashDetect::Unload() {
 }
 
 int CrashDetect::OnDebugHook() {
-  if (amx_.GetFrm() < last_frame_
+  cell current_frm = amx_.GetFrm();
+
+  // Record frame start time when entering a new function (frame pointer decreased)
+  if (current_frm < last_frame_ && long_call_time_running_) {
+    frame_start_times_[current_frm] = std::chrono::high_resolution_clock::now();
+  }
+
+  if (current_frm < last_frame_
       && (Options::shared().trace_flags() & TRACE_FUNCTIONS)
       && debug_info_.IsLoaded()) {
     AMXStackTrace trace = GetAMXStackTrace(
       amx_,
-      amx_.GetFrm(),
+      current_frm,
       amx_.GetCip(),
       1);
     if (trace.current_frame().return_address() != 0) {
       PrintTraceFrame(trace.current_frame(), debug_info_);
     }
   }
-  last_frame_ = amx_.GetFrm();
+  last_frame_ = current_frm;
   return prev_debug_ != nullptr ? prev_debug_(amx_) : AMX_ERR_NONE;
 }
 
@@ -163,6 +171,11 @@ int CrashDetect::OnCallback(cell index, cell *result, cell *params) {
 
 int CrashDetect::OnExec(cell *retval, int index) {
   Push(AMXCall::Public(amx_, index));
+
+  // Record start time for the initial public function frame
+  if (long_call_time_running_) {
+    frame_start_times_[amx_.GetFrm()] = std::chrono::high_resolution_clock::now();
+  }
 
   if (Options::shared().trace_flags() & TRACE_FUNCTIONS) {
     last_frame_ = 0;
@@ -432,12 +445,35 @@ void CrashDetect::PrintAMXBacktrace(std::ostream &stream) {
   cell frm = top_amx.GetFrm();
   int level = 0;
 
-  if (!calls.IsEmpty() && cip != 0) {
-    stream << "AMX backtrace:";
+  // Get timing information
+  auto now = std::chrono::high_resolution_clock::now();
+
+  // Find the oldest call to calculate total time
+  AMXCallStack temp_calls = call_stack_;
+  std::chrono::high_resolution_clock::time_point oldest_start = now;
+  while (!temp_calls.IsEmpty()) {
+    AMXCall temp_call = temp_calls.Pop();
+    oldest_start = temp_call.start_time();
   }
+  auto total_duration = std::chrono::duration_cast<std::chrono::microseconds>(
+      now - oldest_start);
+  double total_ms = total_duration.count() / 1000.0;
+
+  if (!calls.IsEmpty() && cip != 0) {
+    stream << "AMX backtrace (total time: "
+           << std::fixed << std::setprecision(3) << total_ms << "ms):";
+  }
+
+  // Track the next call's start time to calculate duration for current call
+  auto next_start_time = now;
 
   while (!calls.IsEmpty() && cip != 0 && amx == top_amx) {
     AMXCall call = calls.Pop();
+
+    // Calculate time spent in this call
+    auto call_duration = std::chrono::duration_cast<std::chrono::microseconds>(
+        next_start_time - call.start_time());
+    double call_ms = call_duration.count() / 1000.0;
 
     // native function
     if (call.IsNative()) {
@@ -450,6 +486,7 @@ void CrashDetect::PrintAMXBacktrace(std::ostream &stream) {
       if (!module.empty()) {
         stream << " in " << fileutils::GetFileName(module);
       }
+      stream << " [" << std::fixed << std::setprecision(3) << call_ms << "ms]";
     }
 
     // public function
@@ -474,6 +511,8 @@ void CrashDetect::PrintAMXBacktrace(std::ostream &stream) {
         frames.back().set_caller_address(entry_point);
       }
 
+      // Print all frames with timing for each
+      auto frame_next_time = next_start_time;
       for (std::deque<AMXStackFrame>::const_iterator it = frames.begin();
            it != frames.end(); it++) {
         const AMXStackFrame &frame = *it;
@@ -484,11 +523,32 @@ void CrashDetect::PrintAMXBacktrace(std::ostream &stream) {
         if (!handler->debug_info_.IsLoaded()) {
           stream << " in " << handler->amx_name_;
         }
+
+        // Look up frame start time and calculate duration
+        auto frame_it = frame_start_times_.find(frame.address());
+        if (frame_it != frame_start_times_.end()) {
+          auto frame_duration = std::chrono::duration_cast<std::chrono::microseconds>(
+              frame_next_time - frame_it->second);
+          double frame_ms = frame_duration.count() / 1000.0;
+          if (frame_ms < 0.0) frame_ms = 0.0;  // Clamp negative values
+          stream << " [" << std::fixed << std::setprecision(3) << frame_ms << "ms]";
+          frame_next_time = frame_it->second;
+        } else {
+          // No recorded start time - use time since call started
+          auto frame_duration = std::chrono::duration_cast<std::chrono::microseconds>(
+              frame_next_time - call.start_time());
+          double frame_ms = frame_duration.count() / 1000.0;
+          if (frame_ms < 0.0) frame_ms = 0.0;  // Clamp negative values
+          stream << " [" << std::fixed << std::setprecision(3) << frame_ms << "ms]";
+        }
       }
 
       frm = call.frm();
       cip = call.cip();
     }
+
+    // Update next_start_time for the next iteration
+    next_start_time = call.start_time();
   }
 }
 
@@ -564,6 +624,7 @@ AMXCall CrashDetect::Pop() {
   if (call_stack_.IsEmpty()) {
     long_call_time_next_ =
         std::chrono::high_resolution_clock::time_point::max();
+    frame_start_times_.clear();
   }
   return call;
 }

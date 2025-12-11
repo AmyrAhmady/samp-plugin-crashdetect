@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <cstdio>
 #include <chrono>
+#include <map>
 #include "amxcallstack.h"
 #include "amxdebuginfo.h"
 #include "amxhandler.h"
@@ -103,6 +104,7 @@ class CrashDetect: public AMXHandler<CrashDetect> {
   static std::chrono::microseconds long_call_time_current_;
   static std::chrono::high_resolution_clock::time_point long_call_time_next_;
   static bool long_call_time_running_;
+  static std::map<cell, std::chrono::high_resolution_clock::time_point> frame_start_times_;
 };
 
 #endif // !CRASHDETECT_H
