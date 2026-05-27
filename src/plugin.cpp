@@ -46,7 +46,9 @@ namespace {
 std::vector<std::function<void()>> unload_callbacks;
 
 subhook::Hook exec_hook;
+#ifdef _WIN32
 subhook::Hook open_file_hook;
+#endif
 std::string last_opened_amx_file_name;
 
 #ifdef _WIN32
@@ -72,19 +74,6 @@ std::string last_opened_amx_file_name;
       dwCreationDisposition,
       dwFlagsAndAttributes,
       hTemplateFile);
-  }
-#else
-  typedef FILE *(*fopen_t)(const char *, const char *);
-
-  FILE *FopenHook(const char *filename, const char *mode) {
-    const char *ext = fileutils::GetFileExtensionPtr(filename);
-    if (ext != nullptr && stringutils::CompareIgnoreCase(ext, "amx") == 0) {
-      last_opened_amx_file_name = filename;
-    }
-
-    fopen_t original_fopen =
-      reinterpret_cast<fopen_t>(open_file_hook.GetTrampoline());
-    return original_fopen(filename, mode);
   }
 #endif
 
@@ -168,12 +157,10 @@ PLUGIN_EXPORT bool PLUGIN_CALL Load(void **ppData) {
 
   #if _WIN32
     open_file_hook.Install((void*)CreateFileA, (void*)CreateFileAHook);
-  #else
-    open_file_hook.Install((void*)fopen, (void*)FopenHook);
+    unload_callbacks.push_back([]() {
+      open_file_hook.Remove();
+    });
   #endif
-  unload_callbacks.push_back([]() {
-    open_file_hook.Remove();
-  });
 
   AMXPathFinder::shared().AddSearchPath("gamemodes");
   AMXPathFinder::shared().AddSearchPath("filterscripts");
