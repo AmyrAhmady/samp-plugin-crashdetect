@@ -1747,7 +1747,7 @@ int AMXAPI amx_SetExtHooks(AMX *amx, AMX_EXT_HOOKS *ext_hooks)
      * fast "indirect threaded" interpreter.
      */
 
-#define NEXT(cip)       do { (amx)->cip=(cell)cip-(cell)code; CHECK_LONG_CALL_TIME(); goto **cip++; } while (0)
+#define NEXT(cip)       do { (amx)->cip=(cell)cip-(cell)code; CHECK_LONG_CALL_TIME(); goto *(void *)(ucell)(*cip++); } while (0)
 
 int AMXAPI amx_Exec(AMX *amx, cell *retval, int index)
 {

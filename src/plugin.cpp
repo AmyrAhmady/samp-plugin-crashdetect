@@ -46,7 +46,9 @@ namespace {
 std::vector<std::function<void()>> unload_callbacks;
 
 subhook::Hook exec_hook;
+#ifdef _WIN32
 subhook::Hook open_file_hook;
+#endif
 std::string last_opened_amx_file_name;
 
 #ifdef _WIN32
@@ -73,23 +75,21 @@ std::string last_opened_amx_file_name;
       dwFlagsAndAttributes,
       hTemplateFile);
   }
-#else
-  FILE *FopenHook(const char *filename, const char *mode) {
-    subhook::ScopedHookRemove _(&open_file_hook);
-    const char *ext = fileutils::GetFileExtensionPtr(filename);
-    if (ext != nullptr && stringutils::CompareIgnoreCase(ext, "amx") == 0) {
-      last_opened_amx_file_name = filename;
-    }
-    return fopen(filename, mode);
-  }
 #endif
 
 int AMXAPI OnDebugHook(AMX *amx) {
-  return CrashDetect::GetHandler(amx)->OnDebugHook();
+  CrashDetect *handler = CrashDetect::GetHandler(amx);
+  if (handler == nullptr) {
+    return AMX_ERR_NONE;
+  }
+  return handler->OnDebugHook();
 }
 
 int AMXAPI OnCallback(AMX *amx, cell index, cell *result, cell *params) {
   CrashDetect *handler = CrashDetect::GetHandler(amx);
+  if (handler == nullptr) {
+    return AMX_ERR_NONE;
+  }
   return handler->OnCallback(index, result, params);
 }
 
@@ -106,16 +106,25 @@ int AMXAPI OnExec(AMX *amx, cell *retval, int index) {
 
 int AMXAPI OnExecError(AMX *amx, cell index, cell *retval, int error) {
   CrashDetect *handler = CrashDetect::GetHandler(amx);
+  if (handler == nullptr) {
+    return AMX_ERR_NONE;
+  }
   return handler->OnExecError(index, retval, error);
 }
 
 int AMXAPI OnLongCallRequest(AMX *amx, int option, int value) {
   CrashDetect *handler = CrashDetect::GetHandler(amx);
+  if (handler == nullptr) {
+    return AMX_ERR_NONE;
+  }
   return handler->OnLongCallRequest(option, value);
 }
 
 int AMXAPI OnAddressNaughtRequest(AMX *amx, int option) {
   CrashDetect *handler = CrashDetect::GetHandler(amx);
+  if (handler == nullptr) {
+    return AMX_ERR_NONE;
+  }
   return handler->OnAddressNaughtRequest(option);
 }
 
@@ -148,12 +157,10 @@ PLUGIN_EXPORT bool PLUGIN_CALL Load(void **ppData) {
 
   #if _WIN32
     open_file_hook.Install((void*)CreateFileA, (void*)CreateFileAHook);
-  #else
-    open_file_hook.Install((void*)fopen, (void*)FopenHook);
+    unload_callbacks.push_back([]() {
+      open_file_hook.Remove();
+    });
   #endif
-  unload_callbacks.push_back([]() {
-    open_file_hook.Remove();
-  });
 
   AMXPathFinder::shared().AddSearchPath("gamemodes");
   AMXPathFinder::shared().AddSearchPath("filterscripts");

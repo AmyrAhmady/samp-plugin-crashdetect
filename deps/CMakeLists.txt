@@ -18,35 +18,46 @@ macro(get_library_filename library filename)
   set(${filename} ${_prefix}${library}${_suffix})
 endmacro()
 
+set(DEPS_EXTERNALPROJECT_BYPRODUCTS BUILD_BYPRODUCTS)
+if(NOT CMAKE_VERSION VERSION_LESS 3.26)
+  set(DEPS_EXTERNALPROJECT_BYPRODUCTS INSTALL_BYPRODUCTS)
+endif()
+
+get_library_filename(configreader CONFIGREADER_FILENAME)
+set(CONFIGREADER_LIBRARY ${DEPS_LIBRARY_DIR}/${CONFIGREADER_FILENAME})
 externalproject_add(configreader-external
   PREFIX ${DEPS_PREFIX}
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/configreader
-  CMAKE_ARGS ${DEPS_COMMON_CMAKE_ARGS})
+  CMAKE_ARGS ${DEPS_COMMON_CMAKE_ARGS}
+  ${DEPS_EXTERNALPROJECT_BYPRODUCTS} ${CONFIGREADER_LIBRARY})
 
 add_library(configreader STATIC IMPORTED GLOBAL)
 add_dependencies(configreader configreader-external)
 
-get_library_filename(configreader CONFIGREADER_FILENAME)
 set_target_properties(configreader PROPERTIES
-  IMPORTED_LOCATION ${DEPS_LIBRARY_DIR}/${CONFIGREADER_FILENAME})
+  IMPORTED_LOCATION ${CONFIGREADER_LIBRARY})
 
+get_library_filename(subhook SUBHOOK_FILENAME)
+set(SUBHOOK_LIBRARY ${DEPS_LIBRARY_DIR}/${SUBHOOK_FILENAME})
 externalproject_add(subhook-external
   PREFIX ${DEPS_PREFIX}
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/subhook
   CMAKE_ARGS -DSUBHOOK_STATIC=ON
              -DSUBHOOK_FORCE_32BIT=ON
              -DSUBHOOK_TESTS=OFF
-             ${DEPS_COMMON_CMAKE_ARGS})
+             ${DEPS_COMMON_CMAKE_ARGS}
+  ${DEPS_EXTERNALPROJECT_BYPRODUCTS} ${SUBHOOK_LIBRARY})
 
 add_library(subhook STATIC IMPORTED GLOBAL)
 add_dependencies(subhook subhook-external)
 
-get_library_filename(subhook SUBHOOK_FILENAME)
 set_target_properties(subhook PROPERTIES
-  IMPORTED_LOCATION ${DEPS_LIBRARY_DIR}/${SUBHOOK_FILENAME})
+  IMPORTED_LOCATION ${SUBHOOK_LIBRARY})
 
 list(APPEND DEPS_DEFINITIONS SUBHOOK_STATIC)
 
+get_library_filename(pcre2-8 PCRE_FILENAME)
+set(PCRE_LIBRARY ${DEPS_LIBRARY_DIR}/${PCRE_FILENAME})
 externalproject_add(pcre-external
   PREFIX ${DEPS_PREFIX}
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/pcre
@@ -54,18 +65,14 @@ externalproject_add(pcre-external
              -DPCRE2_BUILD_TESTS=OFF
              -DPCRE2_BUILD_PCRE2GREP=OFF
              -DPCRE2_SUPPORT_LIBZ=OFF
-             ${DEPS_COMMON_CMAKE_ARGS})
+             ${DEPS_COMMON_CMAKE_ARGS}
+  ${DEPS_EXTERNALPROJECT_BYPRODUCTS} ${PCRE_LIBRARY})
 
 add_library(pcre STATIC IMPORTED GLOBAL)
 add_dependencies(pcre pcre-external)
 
-get_library_filename(pcre PCRE_FILENAME)
 set_target_properties(pcre PROPERTIES
-  IMPORTED_LOCATION ${DEPS_LIBRARY_DIR}/${PCRE_FILENAME})
-
-get_library_filename(pcre2-8 PCRE_FILENAME)
-set_target_properties(pcre PROPERTIES
-  IMPORTED_LOCATION ${DEPS_LIBRARY_DIR}/${PCRE_FILENAME})
+  IMPORTED_LOCATION ${PCRE_LIBRARY})
 if(WIN32)
   get_library_filename(pcre2-8d PCRE_FILENAME_DEBUG)
   set_target_properties(pcre PROPERTIES

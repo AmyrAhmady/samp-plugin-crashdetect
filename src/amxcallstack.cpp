@@ -23,6 +23,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include <cassert>
+#include <chrono>
 #include "amxcallstack.h"
 
 AMXCall::AMXCall(Type type, AMXRef amx, cell index)
@@ -30,7 +31,8 @@ AMXCall::AMXCall(Type type, AMXRef amx, cell index)
    type_(type),
    frm_(amx.GetFrm()),
    cip_(amx.GetCip()),
-   index_(index)
+   index_(index),
+   start_time_(std::chrono::high_resolution_clock::now())
 {
 }
 
@@ -39,7 +41,8 @@ AMXCall::AMXCall(Type type, AMXRef amx, cell index, cell frm, cell cip)
    type_(type),
    frm_(frm),
    cip_(cip),
-   index_(index)
+   index_(index),
+   start_time_(std::chrono::high_resolution_clock::now())
 {
 }
 

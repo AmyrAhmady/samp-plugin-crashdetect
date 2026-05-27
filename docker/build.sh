@@ -1,27 +1,26 @@
 #!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+IMAGE_TAG="samp-plugin-crashdetect/build:ubuntu-24.04"
 
 # Available configs: Debug, RelWithDebInfo, [Release], MinSizeRel
-[[ -z "$CONFIG" ]] \
-&& config=Release \
-|| config="$CONFIG"
+config="${CONFIG:-Release}"
 
 docker build \
-    -t samp-plugin-crashdetect/build:ubuntu-18.04 ./ \
-|| exit 1
+    --platform linux/amd64 \
+    -t "${IMAGE_TAG}" \
+    "${SCRIPT_DIR}"
 
-folders=('build')
-for folder in "${folders[@]}"; do
-    if [[ ! -d "./${folder}" ]]; then
-        mkdir ${folder}
-    fi
-    sudo chown -R 1000:1000 ${folder} || exit 1
-done
+mkdir -p "${SCRIPT_DIR}/build"
 
 docker run \
     --rm \
     -t \
+    --platform linux/amd64 \
+    --user "$(id -u):$(id -g)" \
     -w /code \
-    -v $PWD/..:/code \
-    -v $PWD/build:/code/build \
-    -e CONFIG=${config} \
-    samp-plugin-crashdetect/build:ubuntu-18.04
+    -v "${SCRIPT_DIR}/..:/code" \
+    -v "${SCRIPT_DIR}/build:/code/build" \
+    -e CONFIG="${config}" \
+    "${IMAGE_TAG}"

@@ -1,15 +1,15 @@
 #!/bin/sh
-[ -z $CONFIG ] && config=Release || config="$CONFIG"
+set -e
+
+config="${CONFIG:-Release}"
 
 cmake --version
 
-    # -G Ninja \
 cmake \
-    -S . \
-    -B build \
+    -S /code \
+    -B /code/build \
+    -G Ninja \
     -DBUILD_TESTING=OFF \
-    -DCMAKE_BUILD_TYPE=$config \
-&&
-cd build \
-&&
-make -j$(nproc)
+    -DCMAKE_BUILD_TYPE="${config}"
+
+cmake --build /code/build --parallel "$(nproc)"
