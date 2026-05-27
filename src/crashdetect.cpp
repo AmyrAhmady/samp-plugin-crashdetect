@@ -265,12 +265,18 @@ int CrashDetect::OnExecError(int index, cell *retval, int error) {
 
   if (callback_index >= 0) {
     if (amx_.CheckStack()) {
-      cell suppress_addr, *suppress_ptr;
-      amx_PushArray(amx_, &suppress_addr, &suppress_ptr, &suppress, 1);
-      amx_Push(amx_, error);
-      OnExec(retval, callback_index);
-      amx_Release(amx_, suppress_addr);
-      suppress = *suppress_ptr;
+      cell suppress_addr = 0;
+      cell *suppress_ptr = nullptr;
+      int push_error =
+        amx_PushArray(amx_, &suppress_addr, &suppress_ptr, &suppress, 1);
+      if (push_error == AMX_ERR_NONE && suppress_ptr != nullptr) {
+        push_error = amx_Push(amx_, error);
+        if (push_error == AMX_ERR_NONE) {
+          OnExec(retval, callback_index);
+          suppress = *suppress_ptr;
+        }
+        amx_Release(amx_, suppress_addr);
+      }
     }
   }
 

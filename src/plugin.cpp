@@ -74,13 +74,17 @@ std::string last_opened_amx_file_name;
       hTemplateFile);
   }
 #else
+  typedef FILE *(*fopen_t)(const char *, const char *);
+
   FILE *FopenHook(const char *filename, const char *mode) {
-    subhook::ScopedHookRemove _(&open_file_hook);
     const char *ext = fileutils::GetFileExtensionPtr(filename);
     if (ext != nullptr && stringutils::CompareIgnoreCase(ext, "amx") == 0) {
       last_opened_amx_file_name = filename;
     }
-    return fopen(filename, mode);
+
+    fopen_t original_fopen =
+      reinterpret_cast<fopen_t>(open_file_hook.GetTrampoline());
+    return original_fopen(filename, mode);
   }
 #endif
 
