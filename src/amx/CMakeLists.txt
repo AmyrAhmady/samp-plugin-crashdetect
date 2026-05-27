@@ -4,6 +4,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+# ASM32 requires external assembler symbols that this repository does not build.
 add_definitions(
   -DAMX_ALIGN
   -DAMX_CLEANUP
@@ -19,7 +20,6 @@ add_definitions(
   -DAMX_XXXUSERDATA
   -DAMX_ANSIONLY
   -DAMX_NODYNALOAD
-  -DASM32
   -DsNAMEMAX=63
 )
 
